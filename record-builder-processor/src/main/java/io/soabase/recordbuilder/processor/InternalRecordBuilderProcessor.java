@@ -377,6 +377,7 @@ class InternalRecordBuilderProcessor {
          */
         var codeBlockBuilder = CodeBlock.builder().add("return new $L$L(", builderClassType.name(),
                 typeVariables.isEmpty() ? "" : "<>");
+
         addComponentCallsAsArguments(-1, codeBlockBuilder, false);
         codeBlockBuilder.add(");");
         var methodSpec = MethodSpec.methodBuilder(metaData.withClassMethodPrefix())
@@ -384,7 +385,20 @@ class InternalRecordBuilderProcessor {
                 .addJavadoc("Return a new record builder using the current values")
                 .addModifiers(Modifier.PUBLIC, Modifier.DEFAULT).returns(builderClassType.typeName())
                 .addCode(codeBlockBuilder.build()).build();
+
+       /* Adds a method that returns a copy builder
+        *
+        * public static MyRecordBuilder builder() { return new MyRecordBuilder(); }
+        */
+        var staticMethodBuilder = MethodSpec.methodBuilder(metaData.builderMethodName())
+                .addAnnotation(generatedRecordBuilderAnnotation)
+                .addJavadoc("Return a new builder with all fields set to default Java values from \"with\"er")
+                .addModifiers(Modifier.PUBLIC, Modifier.STATIC).addTypeVariables(typeVariables)
+                .returns(builderClassType.typeName()).addStatement("return new $T()", builderClassType.typeName())
+                .build();
+
         classBuilder.addMethod(methodSpec);
+        classBuilder.addMethod(staticMethodBuilder);
     }
 
     private String getUniqueVarName() {
